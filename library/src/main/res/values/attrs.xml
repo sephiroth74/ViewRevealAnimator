@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<declare-styleable name="ViewRelealAnimator">
+
+		<!-- fallback animations (pre lollipop) -->
+		<attr name="android:inAnimation"></attr>
+		<attr name="android:outAnimation"></attr>
+
+		<attr name="android:animateFirstView"></attr>
+		<attr name="android:measureAllChildren"></attr>
+
+		<!-- enable/disable the animations -->
+		<attr name="vra_animationsEnabled" format="boolean"></attr>
+
+		<!-- if true, always use the fallback animations (if enabled) -->
+		<attr name="vra_alwaysUseFallbackAnimations" format="boolean"></attr>
+
+		<!-- duration of the reveal effect animation -->
+		<!-- this field does not affect the inAnimation and outAnimation fallbacks -->
+		<attr name="android:animationDuration"></attr>
+
+		<attr name="android:interpolator"></attr>
+	</declare-styleable>
+</resources>
