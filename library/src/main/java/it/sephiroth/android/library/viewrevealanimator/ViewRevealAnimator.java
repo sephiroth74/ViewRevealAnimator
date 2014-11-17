@@ -26,16 +26,6 @@ import android.widget.ViewAnimator;
  * Created by alessandro crugnola on 14/11/14.
  */
 public class ViewRevealAnimator extends FrameLayout {
-    public interface OnViewChangedListener {
-        void onViewChanged(int previousIndex, int currentIndex);
-    }
-
-    public interface onViewAnimationListener {
-        void onViewAnimationStarted(int previousIndex, int currentIndex);
-
-        void onViewAnimationCompleted(int previousIndex, int currentIndex);
-    }
-
     private static final String TAG = "ViewRevealAnimator";
     private static final boolean DBG = false;
     int mWhichChild = 0;
@@ -52,13 +42,24 @@ public class ViewRevealAnimator extends FrameLayout {
     Object mAnimator;
     Object mInterpolator;
     OnViewChangedListener mViewChangedListener;
-    onViewAnimationListener mViewAnimationListener;
+    OnViewAnimationListener mViewAnimationListener;
+
+    public interface OnViewChangedListener {
+        void onViewChanged(int previousIndex, int currentIndex);
+    }
+
+    public interface OnViewAnimationListener {
+        void onViewAnimationStarted(int previousIndex, int currentIndex);
+
+        void onViewAnimationCompleted(int previousIndex, int currentIndex);
+    }
 
     public ViewRevealAnimator(Context context) {
         super(context);
         initViewAnimator(context, null);
     }
 
+    @TargetApi (11)
     public ViewRevealAnimator(Context context, AttributeSet attrs) {
         super(context, attrs);
 
@@ -108,17 +109,16 @@ public class ViewRevealAnimator extends FrameLayout {
 
     }
 
-    @Override
-    public void setMeasureAllChildren(final boolean measureAll) {
-        super.setMeasureAllChildren(measureAll);
-    }
-
     public void setOnViewChangedListener(OnViewChangedListener listener) {
         mViewChangedListener = listener;
     }
 
-    public void setOnViewAnimationListener(onViewAnimationListener listener) {
+    public void setOnViewAnimationListener(OnViewAnimationListener listener) {
         mViewAnimationListener = listener;
+    }
+
+    public void setDisplayedChild(int whichChild) {
+        setDisplayedChild(whichChild, null);
     }
 
     public void setDisplayedChild(int whichChild, @Nullable Point origin) {
@@ -171,10 +171,10 @@ public class ViewRevealAnimator extends FrameLayout {
             return;
         }
 
-        if (!getUseFallbackAnimations()) {
-            showOnly21(previousChild, childIndex, point);
-        } else {
+        if (getUseFallbackAnimations()) {
             showOnly19(previousChild, childIndex);
+        } else {
+            showOnly21(previousChild, childIndex, point);
         }
     }
 
@@ -290,6 +290,7 @@ public class ViewRevealAnimator extends FrameLayout {
 
                 @Override
                 public void onAnimationRepeat(final Animation animation) {
+                    // empty block
                 }
             });
 
@@ -439,12 +440,72 @@ public class ViewRevealAnimator extends FrameLayout {
         return null;
     }
 
+    /**
+     * Returns the current animation used to animate a View that enters the screen.
+     *
+     * @return An Animation or null if none is set.
+     * @see #setInAnimation(android.view.animation.Animation)
+     * @see #setInAnimation(android.content.Context, int)
+     */
     public Animation getInAnimation() {
         return mInAnimation;
     }
 
+    /**
+     * Specifies the animation used to animate a View that enters the screen.
+     *
+     * @param inAnimation The animation started when a View enters the screen.
+     * @see #getInAnimation()
+     * @see #setInAnimation(android.content.Context, int)
+     */
+    public void setInAnimation(Animation inAnimation) {
+        mInAnimation = inAnimation;
+    }
+
+    /**
+     * Returns the current animation used to animate a View that exits the screen.
+     *
+     * @return An Animation or null if none is set.
+     * @see #setOutAnimation(android.view.animation.Animation)
+     * @see #setOutAnimation(android.content.Context, int)
+     */
     public Animation getOutAnimation() {
         return mOutAnimation;
+    }
+
+    /**
+     * Specifies the animation used to animate a View that exit the screen.
+     *
+     * @param outAnimation The animation started when a View exit the screen.
+     * @see #getOutAnimation()
+     * @see #setOutAnimation(android.content.Context, int)
+     */
+    public void setOutAnimation(Animation outAnimation) {
+        mOutAnimation = outAnimation;
+    }
+
+    /**
+     * Specifies the animation used to animate a View that enters the screen.
+     *
+     * @param context    The application's environment.
+     * @param resourceID The resource id of the animation.
+     * @see #getInAnimation()
+     * @see #setInAnimation(android.view.animation.Animation)
+     */
+    public void setInAnimation(Context context, int resourceID) {
+        setInAnimation(AnimationUtils.loadAnimation(context, resourceID));
+    }
+
+    /**
+     * Specifies the animation used to animate a View that exit the screen.
+     *
+     * @param context    The application's environment.
+     * @param resourceID The resource id of the animation.
+     * @see #getOutAnimation()
+     * @see #setOutAnimation(android.view.animation.Animation)
+     */
+    public void setOutAnimation(Context context, int resourceID) {
+        setOutAnimation(AnimationUtils.loadAnimation(context, resourceID));
     }
 
     /**
@@ -524,7 +585,7 @@ public class ViewRevealAnimator extends FrameLayout {
 
     @Override
     public int getBaseline() {
-        return (getCurrentView() != null) ? getCurrentView().getBaseline() : super.getBaseline();
+        return (getCurrentView() == null) ? super.getBaseline() : getCurrentView().getBaseline();
     }
 
     @TargetApi (14)

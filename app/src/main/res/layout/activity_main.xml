@@ -15,7 +15,7 @@
 		android:id="@+id/animator"
 		android:layout_width="200dip"
 		android:layout_height="200dip"
-		android:animationDuration="@android:integer/config_mediumAnimTime"
+		android:animationDuration="@android:integer/config_longAnimTime"
 		android:animateFirstView="true"
 		android:measureAllChildren="true"
 		app:vra_animationsEnabled="true"

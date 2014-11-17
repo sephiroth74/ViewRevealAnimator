@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply from: "${project.rootDir}/config/quality.gradle"
 
 group GROUP
 version VERSION_NAME

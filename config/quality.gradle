@@ -1,0 +1,63 @@
+apply plugin: 'checkstyle'
+apply plugin: 'findbugs'
+apply plugin: 'pmd'
+
+check.dependsOn 'checkstyle', 'findbugs', 'pmd'
+
+
+task checkstyle(type: Checkstyle) {
+    description 'Run CheckStyle'
+    group 'verification'
+
+    configFile file("${project.rootDir}/config/quality/checkstyle/checkstyle.xml")
+    source 'src'
+    include '**/*.java'
+    exclude '**/gen/**'
+
+    classpath = files()
+}
+
+task findbugs(type: FindBugs) {
+    description 'Run FindBugs'
+    group 'verification'
+
+    ignoreFailures = true
+    effort = "max"
+    reportLevel = "high"
+    excludeFilter = new File("${project.rootDir}/config/quality/findbugs/findbugs-filter.xml")
+    classes = files("$project.buildDir/intermediates/classes/")
+
+    source 'src'
+    include '**/*.java'
+    exclude '**/gen/**'
+
+    reports {
+        xml {
+            enabled = false
+            withMessages true
+        }
+        html {
+            enabled = true
+        }
+    }
+
+    classpath = files()
+}
+
+task pmd(type: Pmd) {
+    description 'Run PMD'
+    group 'verification'
+
+    ignoreFailures = true
+    //ruleSets = ["basic", "braces", "strings", "design", "unusedcode"]
+    ruleSets = ["java-basic", "java-design"]
+    source = fileTree('src/main/java')
+
+    include '**/*.java'
+    exclude '**/gen/**'
+
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}

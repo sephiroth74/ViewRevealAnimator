@@ -12,7 +12,7 @@ import android.view.View;
 import it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator;
 
 public class MainActivity extends ActionBarActivity
-    implements View.OnClickListener, ViewRevealAnimator.onViewAnimationListener, ViewRevealAnimator.OnViewChangedListener {
+    implements View.OnClickListener, ViewRevealAnimator.OnViewAnimationListener, ViewRevealAnimator.OnViewChangedListener {
     private static final String TAG = "MainActivity";
     ViewRevealAnimator mViewAnimator;
 
