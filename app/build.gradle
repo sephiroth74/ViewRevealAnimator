@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "it.sephiroth.android.library.demo_viewrevealanimator"
-        minSdkVersion 10
+        minSdkVersion 14
         targetSdkVersion 21
         versionCode 1
         versionName "1.0"

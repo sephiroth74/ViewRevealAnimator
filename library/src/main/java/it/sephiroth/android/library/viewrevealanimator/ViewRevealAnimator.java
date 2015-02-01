@@ -27,66 +27,65 @@ import android.widget.ViewAnimator;
  */
 public class ViewRevealAnimator extends FrameLayout {
     private static final String TAG = "ViewRevealAnimator";
-    private static final boolean DBG = false;
+    private static final boolean DBG = true;
     int mWhichChild = 0;
-    int mPreviousChild = -1;
     boolean mFirstTime = true;
     boolean mAnimateFirstTime = true;
-    boolean mAnimationsEnabled = true;
-    boolean mUseFallbackAnimations = false;
     int mAnimationDuration;
-    // fallback animators for api < 21
     Animation mInAnimation;
     Animation mOutAnimation;
-    // default animator for api >= 21
     Object mAnimator;
-    Object mInterpolator;
+    boolean mAnimatorAnimating;
+    Interpolator mInterpolator;
     OnViewChangedListener mViewChangedListener;
-    OnViewAnimationListener mViewAnimationListener;
+    RevealAnimator mInstance;
+    boolean mHideBeforeReveal;
+
+    public int getViewRadius(final View view) {
+        return Math.min(view.getWidth(), view.getHeight());
+    }
 
     public interface OnViewChangedListener {
         void onViewChanged(int previousIndex, int currentIndex);
     }
 
-    public interface OnViewAnimationListener {
-        void onViewAnimationStarted(int previousIndex, int currentIndex);
-
-        void onViewAnimationCompleted(int previousIndex, int currentIndex);
-    }
-
     public ViewRevealAnimator(Context context) {
-        super(context);
-        initViewAnimator(context, null);
+        this(context, null);
     }
 
-    @TargetApi (11)
     public ViewRevealAnimator(Context context, AttributeSet attrs) {
+        this(context, attrs, 0);
+    }
+
+    public ViewRevealAnimator(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs);
+
+        if (Build.VERSION.SDK_INT >= 21) {
+            mInstance = new LollipopRevealAnimatorImpl(this);
+        } else {
+            mInstance = new ICSRevealAnimatorImpl(this);
+        }
 
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ViewRelealAnimator);
 
         int resourceIn = a.getResourceId(R.styleable.ViewRelealAnimator_android_inAnimation, 0);
         int resourceOut = a.getResourceId(R.styleable.ViewRelealAnimator_android_outAnimation, 0);
-
-        setAnimationFallback(context, resourceIn, resourceOut);
-
         boolean flag = a.getBoolean(R.styleable.ViewRelealAnimator_android_animateFirstView, true);
+        int animationDuration = a.getInteger(R.styleable.ViewRelealAnimator_android_animationDuration, 400);
+        boolean hideBeforeReveal = a.getBoolean(R.styleable.ViewRelealAnimator_vra_hideBeforeReveal, true);
+
+        setInAnimation(context, resourceIn);
+        setOutAnimation(context, resourceOut);
         setAnimateFirstView(flag);
 
-        flag = a.getBoolean(R.styleable.ViewRelealAnimator_vra_animationsEnabled, true);
-        setAnimaionsEnabled(flag);
-
-        flag = a.getBoolean(R.styleable.ViewRelealAnimator_vra_alwaysUseFallbackAnimations, false);
-        setAlwaysUseFallbackAnimations(flag);
-
-        int animationDuration = a.getInteger(R.styleable.ViewRelealAnimator_android_animationDuration, 300);
         setAnimationDuration(animationDuration);
+        setHideBeforeReveal(hideBeforeReveal);
 
         if (Build.VERSION.SDK_INT >= 21) {
             int resID =
                 a.getResourceId(R.styleable.ViewRelealAnimator_android_interpolator, android.R.interpolator.accelerate_decelerate);
-            mInterpolator = AnimationUtils.loadInterpolator(context, resID);
-            Log.v(TAG, "interpolator: " + mInterpolator);
+            Interpolator interpolator = AnimationUtils.loadInterpolator(context, resID);
+            setInterpolator(interpolator);
         }
 
         a.recycle();
@@ -106,32 +105,30 @@ public class ViewRevealAnimator extends FrameLayout {
             R.styleable.ViewRelealAnimator_android_measureAllChildren, true);
         setMeasureAllChildren(measureAllChildren);
         a.recycle();
-
     }
 
     public void setOnViewChangedListener(OnViewChangedListener listener) {
         mViewChangedListener = listener;
     }
 
-    public void setOnViewAnimationListener(OnViewAnimationListener listener) {
-        mViewAnimationListener = listener;
-    }
-
+    /**
+     * Sets which child view will be displayed.
+     *
+     * @param whichChild the index of the child view to display
+     */
     public void setDisplayedChild(int whichChild) {
         setDisplayedChild(whichChild, null);
     }
 
     public void setDisplayedChild(int whichChild, @Nullable Point origin) {
-        if (DBG) {
-            Log.i(TAG, "setDisplayedChild, previous: " + mPreviousChild + ", which: " + mWhichChild + ", next: " + whichChild);
-        }
+        Log.i(TAG, "setDisplayedChild, current: " + mWhichChild + ", next: " + whichChild);
 
-        if (isAnimating()) {
-            Log.w(TAG, "View is animating. No animations allowed now.");
+        if (whichChild == mWhichChild) {
+            // same child
             return;
         }
 
-        mPreviousChild = mWhichChild;
+        int mPreviousChild = mWhichChild;
         mWhichChild = whichChild;
 
         if (whichChild >= getChildCount()) {
@@ -140,60 +137,102 @@ public class ViewRevealAnimator extends FrameLayout {
             mWhichChild = getChildCount() - 1;
         }
         boolean hasFocus = getFocusedChild() != null;
-        showOnly(mPreviousChild, mWhichChild, origin);
+        showOnly(mPreviousChild, mWhichChild);
         if (hasFocus) {
             requestFocus(FOCUS_FORWARD);
         }
     }
 
-    @SuppressWarnings ("unused")
+    /**
+     * Returns the index of the currently displayed child view.
+     *
+     * @return
+     */
     public int getDisplayedChild() {
         return mWhichChild;
     }
 
-    public void showNext(@Nullable Point origin) {
-        setDisplayedChild(mWhichChild + 1, origin);
+    public void showNext() {
+        setDisplayedChild(mWhichChild + 1);
     }
 
-    public void showPrevious(@Nullable Point origin) {
-        setDisplayedChild(mWhichChild - 1, origin);
+    public void showPrevious() {
+        setDisplayedChild(mWhichChild - 1);
     }
 
-    void showOnly(int previousChild, int childIndex, boolean animate, Point point) {
-        if (DBG) {
-            Log.i(TAG, "showOnly: " + previousChild + " >> " + childIndex + ", animate: " + animate);
-        }
+    void showOnly(int previousIndex, int childIndex) {
+        final boolean animate = shouldAnimate();
+        showOnly(previousIndex, childIndex, animate);
+    }
+
+    void showOnly(int previousChild, int childIndex, boolean animate) {
+        Log.i(TAG, "showOnly: " + previousChild + " >> " + childIndex + ", animate: " + animate);
 
         mFirstTime = false;
 
         if (!animate) {
-            showOnlyNoAnimation(previousChild, childIndex);
-            return;
-        }
-
-        if (getUseFallbackAnimations()) {
-            showOnly19(previousChild, childIndex);
+            mInstance.showOnlyNoAnimation(previousChild, childIndex);
+            onViewChanged(previousChild, childIndex);
         } else {
-            showOnly21(previousChild, childIndex, point);
+            mInstance.showOnly(previousChild, childIndex);
         }
     }
 
     @TargetApi (21)
-    protected void showOnly21(final int previousChild, final int childIndex, final Point point) {
+    private void circularHide(final int previousIndex, final int nextIndex, final Point point) {
+        final View previousView = getChildAt(previousIndex);
+        final View nextView = getChildAt(nextIndex);
+
+        Point newPoint = getViewCenter(previousView);
+        int finalRadius = Math.max(previousView.getWidth(), previousView.getHeight());
+
+        Animator animator = ViewAnimationUtils.createCircularReveal(previousView, newPoint.x, newPoint.y, finalRadius, 0);
+        animator.addListener(
+            new AnimatorListenerAdapter() {
+                boolean isCancelled;
+
+                @Override
+                public void onAnimationStart(final Animator animation) {
+                    super.onAnimationStart(animation);
+                }
+
+                @Override
+                public void onAnimationCancel(final Animator animation) {
+                    Log.v(TAG, "onAnimationCancel(out)");
+                    isCancelled = true;
+                    mAnimatorAnimating = false;
+                    showOnlyNoAnimation(previousIndex, nextIndex);
+                }
+
+                @Override
+                public void onAnimationEnd(final Animator animation) {
+                    if (!isCancelled) {
+                        Log.v(TAG, "onAnimationEnd(out)");
+                        super.onAnimationEnd(animation);
+                        circularReveal(previousIndex, nextIndex, point);
+                    }
+                }
+            });
+
+        mAnimator = animator;
+        animator.setDuration(mAnimationDuration);
+        animator.setInterpolator((Interpolator) mInterpolator);
+        animator.start();
+
+        mAnimatorAnimating = true;
+    }
+
+    @TargetApi (21)
+    private void circularReveal(final int previousIndex, final int nextIndex, final Point point) {
         if (DBG) {
-            Log.i(TAG, "showOnly21: " + previousChild + " >> " + childIndex);
+            Log.i(TAG, "circularReveal: " + previousIndex + " > " + nextIndex);
         }
 
-        final boolean isReveal = childIndex > previousChild ? true : false;
-        if (DBG) {
-            Log.v(TAG, "is reveal: " + isReveal);
-        }
+        final View nextView = getChildAt(nextIndex);
+        final View previousView = getChildAt(previousIndex);
+        final View targetView = nextView;
 
-        // previously invisible view
-        final View previousView = getChildAt(previousChild);
-        final View nextView = getChildAt(childIndex);
-        final View targetView = isReveal ? nextView : previousView;
-        nextView.setVisibility(View.VISIBLE);
+        showOnlyNoAnimation(previousIndex, nextIndex);
 
         if (targetView.getWidth() == 0 || targetView.getHeight() == 0) {
             targetView.getViewTreeObserver().addOnPreDrawListener(
@@ -203,9 +242,11 @@ public class ViewRevealAnimator extends FrameLayout {
                         targetView.getViewTreeObserver().removeOnPreDrawListener(this);
 
                         if (targetView.getWidth() == 0 || targetView.getHeight() == 0) {
-                            showOnlyNoAnimation(previousChild, childIndex);
+                            mAnimatorAnimating = false;
+                            showOnlyNoAnimation(previousIndex, nextIndex);
+                            onViewChanged(previousIndex, nextIndex);
                         } else {
-                            showOnly21(previousChild, childIndex, point);
+                            circularReveal(previousIndex, nextIndex, point);
                         }
                         return true;
                     }
@@ -213,134 +254,53 @@ public class ViewRevealAnimator extends FrameLayout {
             return;
         }
 
-        int cx, cy;
-        if (null == point) {
-            cx = (targetView.getLeft() + targetView.getRight()) / 2;
-            cy = (targetView.getTop() + targetView.getBottom()) / 2;
-        } else {
-            cx = targetView.getLeft() + point.x;
-            cy = targetView.getTop() + point.y;
-        }
-
+        Point newPoint = getViewCenter(targetView);
         int finalRadius = Math.max(targetView.getWidth(), targetView.getHeight());
 
-        Animator anim =
-            ViewAnimationUtils.createCircularReveal(
-                targetView,
-                cx,
-                cy,
-                isReveal ? 0 : finalRadius,
-                isReveal ? finalRadius : 0);
+        Animator animator = ViewAnimationUtils
+            .createCircularReveal(targetView, newPoint.x, newPoint.y, 0, finalRadius);
 
-        mAnimator = anim;
-
-        // make the view invisible when the animation is done
-        anim.addListener(
+        animator.addListener(
             new AnimatorListenerAdapter() {
                 boolean isCancelled;
 
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     super.onAnimationEnd(animation);
+                    mAnimatorAnimating = false;
 
                     if (!isCancelled) {
-                        if (null != previousView) {
-                            previousView.setVisibility(View.GONE);
-                        }
-                        onAnimationCompleted(previousChild, childIndex);
-                        onViewChanged(previousChild, childIndex);
+                        onViewChanged(previousIndex, nextIndex);
                     }
                 }
 
                 @Override
                 public void onAnimationCancel(final Animator animation) {
                     isCancelled = true;
+                    mAnimatorAnimating = false;
                     super.onAnimationCancel(animation);
                 }
-
-                @Override
-                public void onAnimationStart(final Animator animation) {
-                    super.onAnimationStart(animation);
-                    onAnimationStarted(previousChild, childIndex);
-                }
             });
 
-        anim.setDuration(mAnimationDuration);
-        anim.setInterpolator((Interpolator) mInterpolator);
-        anim.start();
+        mAnimator = animator;
+        animator.setDuration(mAnimationDuration);
+        animator.setInterpolator((Interpolator) mInterpolator);
+        animator.start();
     }
 
-    protected void showOnly19(final int previousChild, final int childIndex) {
-        if (DBG) {
-            Log.i(TAG, "showOnly19: " + previousChild + " >> " + childIndex);
-        }
-
-        mInAnimation.setAnimationListener(
-            new Animation.AnimationListener() {
-                @Override
-                public void onAnimationStart(final Animation animation) {
-                    onAnimationStarted(previousChild, childIndex);
-                }
-
-                @Override
-                public void onAnimationEnd(final Animation animation) {
-                    onAnimationCompleted(previousChild, childIndex);
-                    onViewChanged(previousChild, childIndex);
-                }
-
-                @Override
-                public void onAnimationRepeat(final Animation animation) {
-                    // empty block
-                }
-            });
-
-        View nextChild = getChildAt(childIndex);
-        nextChild.startAnimation(mInAnimation);
-        nextChild.setVisibility(View.VISIBLE);
-
-        View prevChild = getChildAt(previousChild);
-        if (prevChild.getAnimation() == mOutAnimation) {
-            prevChild.clearAnimation();
-        } else if (mOutAnimation != null && prevChild.getVisibility() == View.VISIBLE) {
-            prevChild.startAnimation(mOutAnimation);
-        } else if (prevChild.getAnimation() == mInAnimation) {
-            prevChild.clearAnimation();
-        }
-        prevChild.setVisibility(View.GONE);
+    protected Point getViewCenter(final View targetView) {
+        Point newPoint = new Point();
+        newPoint.x = (targetView.getLeft() + targetView.getRight()) / 2;
+        newPoint.y = (targetView.getTop() + targetView.getBottom()) / 2;
+        return newPoint;
     }
 
-    protected void showOnlyNoAnimation(final int previousChild, final int childIndex) {
-        if (DBG) {
-            Log.i(TAG, "showOnlyNoAnimation: " + childIndex);
-        }
-        getChildAt(childIndex).setVisibility(View.VISIBLE);
-        getChildAt(previousChild).setVisibility(View.GONE);
-
-        onViewChanged(previousChild, childIndex);
+    protected void showOnlyNoAnimation(final int previousIndex, final int childIndex) {
+        mInstance.showOnlyNoAnimation(previousIndex, childIndex);
     }
 
-    @TargetApi (11)
     public boolean isAnimating() {
-        if (Build.VERSION.SDK_INT >= 21 && !mUseFallbackAnimations) {
-            return mAnimator != null && ((Animator) mAnimator).isRunning();
-        } else {
-            return
-                (mInAnimation != null && (mInAnimation.hasStarted() && !mInAnimation.hasEnded()))
-                    || (mOutAnimation != null && (mOutAnimation.hasStarted() && !mOutAnimation.hasEnded()));
-
-        }
-    }
-
-    public void onAnimationStarted(int prevIndex, int curIndex) {
-        if (null != mViewAnimationListener) {
-            mViewAnimationListener.onViewAnimationStarted(prevIndex, curIndex);
-        }
-    }
-
-    public void onAnimationCompleted(int prevIndex, int curIndex) {
-        if (null != mViewAnimationListener) {
-            mViewAnimationListener.onViewAnimationCompleted(prevIndex, curIndex);
-        }
+        return mInstance.isAnimating();
     }
 
     void onViewChanged(int prevIndex, int curIndex) {
@@ -349,25 +309,13 @@ public class ViewRevealAnimator extends FrameLayout {
         }
     }
 
-    void showOnly(int previousIndex, int childIndex, Point point) {
-        final boolean animate = shouldAnimate();
-        showOnly(previousIndex, childIndex, animate, point);
-    }
-
     private boolean shouldAnimate() {
-        return ((!mFirstTime || mAnimateFirstTime) && mAnimationsEnabled)
-            && (getUseFallbackAnimations() ? null != mInAnimation : true);
-    }
-
-    private boolean getUseFallbackAnimations() {
-        return Build.VERSION.SDK_INT < 21 || mUseFallbackAnimations;
+        return mInstance.shouldAnimate();
     }
 
     @Override
     public void addView(View child, int index, ViewGroup.LayoutParams params) {
-        if (DBG) {
-            Log.i(TAG, "addView, index: " + index + ", current children: " + getChildCount());
-        }
+        Log.i(TAG, "addView, index: " + index + ", current children: " + getChildCount());
         super.addView(child, index, params);
         if (getChildCount() == 1) {
             child.setVisibility(View.VISIBLE);
@@ -383,7 +331,6 @@ public class ViewRevealAnimator extends FrameLayout {
     public void removeAllViews() {
         super.removeAllViews();
         mWhichChild = 0;
-        mPreviousChild = -1;
         mFirstTime = true;
     }
 
@@ -401,7 +348,6 @@ public class ViewRevealAnimator extends FrameLayout {
         final int childCount = getChildCount();
         if (childCount == 0) {
             mWhichChild = 0;
-            mPreviousChild = -1;
             mFirstTime = true;
         } else if (mWhichChild >= childCount) {
             setDisplayedChild(childCount - 1, null);
@@ -418,7 +364,6 @@ public class ViewRevealAnimator extends FrameLayout {
         super.removeViews(start, count);
         if (getChildCount() == 0) {
             mWhichChild = 0;
-            mPreviousChild = -1;
             mFirstTime = true;
         } else if (mWhichChild >= start && mWhichChild < start + count) {
             setDisplayedChild(mWhichChild, null);
@@ -429,15 +374,13 @@ public class ViewRevealAnimator extends FrameLayout {
         removeViews(start, count);
     }
 
+    /**
+     * Returns the current visible child
+     *
+     * @return
+     */
     public View getCurrentView() {
         return getChildAt(mWhichChild);
-    }
-
-    public View getPreviousView() {
-        if (mPreviousChild > -1) {
-            return getChildAt(mPreviousChild);
-        }
-        return null;
     }
 
     /**
@@ -508,43 +451,12 @@ public class ViewRevealAnimator extends FrameLayout {
         setOutAnimation(AnimationUtils.loadAnimation(context, resourceID));
     }
 
-    /**
-     * These are the in and out animations used for devices with API &lt; 21
-     *
-     * @param context
-     * @param inAnimationResID
-     * @param outAnimationResID
-     */
-    public void setAnimationFallback(Context context, int inAnimationResID, int outAnimationResID) {
-        if (DBG) {
-            Log.i(TAG, "setAnimationFallback: " + inAnimationResID + ", " + outAnimationResID);
-        }
-
-        Animation inAnimation = null;
-        Animation outAnimation = null;
-
-        if (inAnimationResID > 0) {
-            inAnimation = AnimationUtils.loadAnimation(context, inAnimationResID);
-        }
-
-        if (outAnimationResID > 0) {
-            outAnimation = AnimationUtils.loadAnimation(context, outAnimationResID);
-        }
-
-        setAnimationFallback(
-            inAnimation, outAnimation);
+    public void setHideBeforeReveal(boolean value) {
+        mHideBeforeReveal = value;
     }
 
-    public void setAnimationFallback(Animation inAnimation, Animation outAnimation) {
-        if (DBG) {
-            Log.i(TAG, "setAnimationFallback: " + inAnimation + ", " + outAnimation);
-        }
-        this.mInAnimation = inAnimation;
-        this.mOutAnimation = outAnimation;
-    }
-
-    public void setAlwaysUseFallbackAnimations(boolean value) {
-        mUseFallbackAnimations = value;
+    public boolean getHideBeforeReveal() {
+        return mHideBeforeReveal;
     }
 
     public void setAnimationDuration(int value) {
@@ -555,32 +467,20 @@ public class ViewRevealAnimator extends FrameLayout {
         return mAnimationDuration;
     }
 
-    @SuppressWarnings ("unused")
+    public void setInterpolator(final Interpolator mInterpolator) {
+        this.mInterpolator = mInterpolator;
+    }
+
+    public Interpolator getInterpolator() {
+        return mInterpolator;
+    }
+
     public boolean getAnimateFirstView() {
         return mAnimateFirstTime;
     }
 
     public void setAnimateFirstView(boolean animate) {
-        if (DBG) {
-            Log.i(TAG, "setAnimateFirstView: " + animate);
-        }
         mAnimateFirstTime = animate;
-    }
-
-    /**
-     * Turn on/off the animations between views
-     *
-     * @param animate
-     */
-    public void setAnimaionsEnabled(boolean animate) {
-        if (DBG) {
-            Log.i(TAG, "setAnimationsEnabled: " + animate);
-        }
-        mAnimationsEnabled = animate;
-    }
-
-    public boolean getAnimationsEnabled() {
-        return mAnimationsEnabled;
     }
 
     @Override
@@ -588,21 +488,15 @@ public class ViewRevealAnimator extends FrameLayout {
         return (getCurrentView() == null) ? super.getBaseline() : getCurrentView().getBaseline();
     }
 
-    @TargetApi (14)
     @Override
     public void onInitializeAccessibilityEvent(AccessibilityEvent event) {
-        if (Build.VERSION.SDK_INT >= 14) {
-            super.onInitializeAccessibilityEvent(event);
-            event.setClassName(ViewAnimator.class.getName());
-        }
+        super.onInitializeAccessibilityEvent(event);
+        event.setClassName(ViewAnimator.class.getName());
     }
 
-    @TargetApi (14)
     @Override
     public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
-        if (Build.VERSION.SDK_INT >= 14) {
-            super.onInitializeAccessibilityNodeInfo(info);
-            info.setClassName(ViewAnimator.class.getName());
-        }
+        super.onInitializeAccessibilityNodeInfo(info);
+        info.setClassName(ViewAnimator.class.getName());
     }
 }

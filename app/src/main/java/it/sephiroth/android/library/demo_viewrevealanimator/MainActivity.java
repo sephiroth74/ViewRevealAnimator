@@ -1,6 +1,5 @@
 package it.sephiroth.android.library.demo_viewrevealanimator;
 
-import android.graphics.Point;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -8,13 +7,16 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 
 import it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator;
 
 public class MainActivity extends ActionBarActivity
-    implements View.OnClickListener, ViewRevealAnimator.OnViewAnimationListener, ViewRevealAnimator.OnViewChangedListener {
+    implements View.OnClickListener, ViewRevealAnimator.OnViewChangedListener, CompoundButton.OnCheckedChangeListener {
     private static final String TAG = "MainActivity";
     ViewRevealAnimator mViewAnimator;
+    private boolean mHideBeforeReveal;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,19 +28,24 @@ public class MainActivity extends ActionBarActivity
         findViewById(R.id.next2).setOnClickListener(this);
         findViewById(R.id.previous).setOnClickListener(this);
 
+        CheckBox checkbox = (CheckBox) findViewById(R.id.checkBox);
+        checkbox.setOnCheckedChangeListener(this);
+
+        mHideBeforeReveal = checkbox.isChecked();
+        mViewAnimator.setHideBeforeReveal(mHideBeforeReveal);
+
         mViewAnimator.setOnTouchListener(
             new View.OnTouchListener() {
                 @Override
                 public boolean onTouch(final View v, final MotionEvent event) {
                     if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                        mViewAnimator.showNext(new Point((int)event.getX(), (int)event.getY()));
+                        mViewAnimator.showNext();
                         return true;
                     }
                     return false;
                 }
             });
 
-        mViewAnimator.setOnViewAnimationListener(this);
         mViewAnimator.setOnViewChangedListener(this);
     }
 
@@ -64,11 +71,11 @@ public class MainActivity extends ActionBarActivity
 
         switch (id) {
             case R.id.next:
-                mViewAnimator.showNext(null);
+                mViewAnimator.showNext();
                 break;
 
             case R.id.previous:
-                mViewAnimator.showPrevious(null);
+                mViewAnimator.showPrevious();
                 break;
 
             case R.id.next2:
@@ -80,17 +87,13 @@ public class MainActivity extends ActionBarActivity
     }
 
     @Override
-    public void onViewAnimationStarted(final int previousIndex, final int currentIndex) {
-        Log.d(TAG, "onViewAnimationStarted(" + previousIndex + ":" + currentIndex + ")");
-    }
-
-    @Override
-    public void onViewAnimationCompleted(final int previousIndex, final int currentIndex) {
-        Log.d(TAG, "onViewAnimationCompleted(" + previousIndex + ":" + currentIndex + ")");
-    }
-
-    @Override
     public void onViewChanged(final int previousIndex, final int currentIndex) {
         Log.d(TAG, "onViewChanged(" + previousIndex + ":" + currentIndex + ")");
+    }
+
+    @Override
+    public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+        mHideBeforeReveal = isChecked;
+        mViewAnimator.setHideBeforeReveal(mHideBeforeReveal);
     }
 }

@@ -9,11 +9,8 @@
 		<attr name="android:animateFirstView"></attr>
 		<attr name="android:measureAllChildren"></attr>
 
-		<!-- enable/disable the animations -->
-		<attr name="vra_animationsEnabled" format="boolean"></attr>
-
-		<!-- if true, always use the fallback animations (if enabled) -->
-		<attr name="vra_alwaysUseFallbackAnimations" format="boolean"></attr>
+		<!-- for API 21 and above: hide the current view before showing the next one -->
+		<attr name="vra_hideBeforeReveal" format="boolean"></attr>
 
 		<!-- duration of the reveal effect animation -->
 		<!-- this field does not affect the inAnimation and outAnimation fallbacks -->
