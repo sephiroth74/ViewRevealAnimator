@@ -46,7 +46,7 @@ public class ViewRevealAnimator extends FrameLayout {
     boolean mHideBeforeReveal;
 
     public int getViewRadius(final View view) {
-        return Math.min(view.getWidth(), view.getHeight());
+        return Math.max(view.getWidth(), view.getHeight());
     }
 
     public ViewRevealAnimator(Context context) {
