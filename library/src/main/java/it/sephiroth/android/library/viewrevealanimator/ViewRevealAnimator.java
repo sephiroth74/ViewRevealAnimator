@@ -196,19 +196,19 @@ public class ViewRevealAnimator extends FrameLayout {
         return newPoint;
     }
 
-    void onViewChanged(int prevIndex, int curIndex) {
+    protected void onViewChanged(int prevIndex, int curIndex) {
         if (null != mViewChangedListener) {
             mViewChangedListener.onViewChanged(prevIndex, curIndex);
         }
     }
 
-    void onAnimationStarted(int prevIndex, int curIndex) {
+    protected void onAnimationStarted(int prevIndex, int curIndex) {
         if (null != mViewAnimationListener) {
             mViewAnimationListener.onViewAnimationStarted(prevIndex, curIndex);
         }
     }
 
-    void onAnimationCompleted(int prevIndex, int curIndex) {
+    protected void onAnimationCompleted(int prevIndex, int curIndex) {
         if (null != mViewAnimationListener) {
             mViewAnimationListener.onViewAnimationCompleted(prevIndex, curIndex);
         }
