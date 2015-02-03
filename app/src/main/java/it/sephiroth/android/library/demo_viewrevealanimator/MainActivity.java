@@ -13,7 +13,7 @@ import android.widget.CompoundButton;
 import it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator;
 
 public class MainActivity extends ActionBarActivity
-    implements View.OnClickListener, ViewRevealAnimator.OnViewChangedListener, CompoundButton.OnCheckedChangeListener {
+    implements View.OnClickListener, ViewRevealAnimator.OnViewChangedListener, CompoundButton.OnCheckedChangeListener, ViewRevealAnimator.OnViewAnimationListener {
     private static final String TAG = "MainActivity";
     ViewRevealAnimator mViewAnimator;
     private boolean mHideBeforeReveal;
@@ -47,6 +47,7 @@ public class MainActivity extends ActionBarActivity
             });
 
         mViewAnimator.setOnViewChangedListener(this);
+        mViewAnimator.setOnViewAnimationListener(this);
     }
 
     @Override
@@ -95,5 +96,15 @@ public class MainActivity extends ActionBarActivity
     public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
         mHideBeforeReveal = isChecked;
         mViewAnimator.setHideBeforeReveal(mHideBeforeReveal);
+    }
+
+    @Override
+    public void onViewAnimationStarted(final int previousIndex, final int currentIndex) {
+        Log.d(TAG, "onViewanimationStarted(" + previousIndex + ":" + currentIndex + ")");
+    }
+
+    @Override
+    public void onViewAnimationCompleted(final int previousIndex, final int currentIndex) {
+        Log.d(TAG, "onViewanimationCompleted(" + previousIndex + ":" + currentIndex + ")");
     }
 }

@@ -85,6 +85,7 @@ public class ICSRevealAnimatorImpl extends RevealAnimatorImpl {
 
         @Override
         public void onAnimationStart(final Animation animation) {
+            parent.onAnimationStarted(prevIndex, childIndex);
         }
 
         @Override
@@ -92,6 +93,7 @@ public class ICSRevealAnimatorImpl extends RevealAnimatorImpl {
             if (DBG) {
                 Log.d(TAG, "onAnimationEnd");
             }
+            parent.onAnimationCompleted(prevIndex, childIndex);
             parent.onViewChanged(prevIndex, childIndex);
         }
 

@@ -41,6 +41,7 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
                 @Override
                 public void onAnimationStart(final Animator animation) {
                     super.onAnimationStart(animation);
+                    parent.onAnimationStarted(previousIndex, nextIndex);
                 }
 
                 @Override
@@ -126,6 +127,7 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
                     }
 
                     if (!isCancelled) {
+                        parent.onAnimationCompleted(previousIndex, nextIndex);
                         parent.onViewChanged(previousIndex, nextIndex);
                     }
                 }
@@ -138,6 +140,13 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
                     isCancelled = true;
                     mAnimatorAnimating = false;
                     super.onAnimationCancel(animation);
+                }
+
+                @Override
+                public void onAnimationStart(final Animator animation) {
+                    if(!hideBeforeReveal) {
+                        parent.onAnimationStarted(previousIndex, nextIndex);
+                    }
                 }
             });
 

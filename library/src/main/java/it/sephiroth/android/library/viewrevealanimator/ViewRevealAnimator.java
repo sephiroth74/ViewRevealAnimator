@@ -21,6 +21,16 @@ import android.widget.ViewAnimator;
  * Created by alessandro crugnola on 14/11/14.
  */
 public class ViewRevealAnimator extends FrameLayout {
+    public interface OnViewChangedListener {
+        void onViewChanged(int previousIndex, int currentIndex);
+    }
+
+    public interface OnViewAnimationListener {
+        void onViewAnimationStarted(int previousIndex, int currentIndex);
+
+        void onViewAnimationCompleted(int previousIndex, int currentIndex);
+    }
+
     private static final String TAG = "ViewRevealAnimator";
     protected static final boolean DBG = true;
     int mWhichChild = 0;
@@ -31,15 +41,12 @@ public class ViewRevealAnimator extends FrameLayout {
     Animation mOutAnimation;
     Interpolator mInterpolator;
     OnViewChangedListener mViewChangedListener;
+    OnViewAnimationListener mViewAnimationListener;
     RevealAnimator mInstance;
     boolean mHideBeforeReveal;
 
     public int getViewRadius(final View view) {
         return Math.min(view.getWidth(), view.getHeight());
-    }
-
-    public interface OnViewChangedListener {
-        void onViewChanged(int previousIndex, int currentIndex);
     }
 
     public ViewRevealAnimator(Context context) {
@@ -102,6 +109,10 @@ public class ViewRevealAnimator extends FrameLayout {
 
     public void setOnViewChangedListener(OnViewChangedListener listener) {
         mViewChangedListener = listener;
+    }
+
+    public void setOnViewAnimationListener(OnViewAnimationListener listener) {
+        mViewAnimationListener = listener;
     }
 
     /**
@@ -189,6 +200,22 @@ public class ViewRevealAnimator extends FrameLayout {
         if (null != mViewChangedListener) {
             mViewChangedListener.onViewChanged(prevIndex, curIndex);
         }
+    }
+
+    void onAnimationStarted(int prevIndex, int curIndex) {
+        if (null != mViewAnimationListener) {
+            mViewAnimationListener.onViewAnimationStarted(prevIndex, curIndex);
+        }
+    }
+
+    void onAnimationCompleted(int prevIndex, int curIndex) {
+        if (null != mViewAnimationListener) {
+            mViewAnimationListener.onViewAnimationCompleted(prevIndex, curIndex);
+        }
+    }
+
+    public boolean isAnimating() {
+        return mInstance.isAnimating();
     }
 
     private boolean shouldAnimate() {
