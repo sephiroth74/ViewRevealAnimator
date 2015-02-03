@@ -1,8 +1,5 @@
 package it.sephiroth.android.library.viewrevealanimator;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Point;
@@ -11,9 +8,7 @@ import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.animation.Animation;
@@ -27,15 +22,13 @@ import android.widget.ViewAnimator;
  */
 public class ViewRevealAnimator extends FrameLayout {
     private static final String TAG = "ViewRevealAnimator";
-    private static final boolean DBG = true;
+    protected static final boolean DBG = true;
     int mWhichChild = 0;
     boolean mFirstTime = true;
     boolean mAnimateFirstTime = true;
     int mAnimationDuration;
     Animation mInAnimation;
     Animation mOutAnimation;
-    Object mAnimator;
-    boolean mAnimatorAnimating;
     Interpolator mInterpolator;
     OnViewChangedListener mViewChangedListener;
     RevealAnimator mInstance;
@@ -121,7 +114,9 @@ public class ViewRevealAnimator extends FrameLayout {
     }
 
     public void setDisplayedChild(int whichChild, @Nullable Point origin) {
-        Log.i(TAG, "setDisplayedChild, current: " + mWhichChild + ", next: " + whichChild);
+        if (DBG) {
+            Log.i(TAG, "setDisplayedChild, current: " + mWhichChild + ", next: " + whichChild);
+        }
 
         if (whichChild == mWhichChild) {
             // same child
@@ -166,7 +161,9 @@ public class ViewRevealAnimator extends FrameLayout {
     }
 
     void showOnly(int previousChild, int childIndex, boolean animate) {
-        Log.i(TAG, "showOnly: " + previousChild + " >> " + childIndex + ", animate: " + animate);
+        if (DBG) {
+            Log.i(TAG, "showOnly: " + previousChild + " >> " + childIndex + ", animate: " + animate);
+        }
 
         mFirstTime = false;
 
@@ -178,129 +175,14 @@ public class ViewRevealAnimator extends FrameLayout {
         }
     }
 
-    @TargetApi (21)
-    private void circularHide(final int previousIndex, final int nextIndex, final Point point) {
-        final View previousView = getChildAt(previousIndex);
-        final View nextView = getChildAt(nextIndex);
-
-        Point newPoint = getViewCenter(previousView);
-        int finalRadius = Math.max(previousView.getWidth(), previousView.getHeight());
-
-        Animator animator = ViewAnimationUtils.createCircularReveal(previousView, newPoint.x, newPoint.y, finalRadius, 0);
-        animator.addListener(
-            new AnimatorListenerAdapter() {
-                boolean isCancelled;
-
-                @Override
-                public void onAnimationStart(final Animator animation) {
-                    super.onAnimationStart(animation);
-                }
-
-                @Override
-                public void onAnimationCancel(final Animator animation) {
-                    Log.v(TAG, "onAnimationCancel(out)");
-                    isCancelled = true;
-                    mAnimatorAnimating = false;
-                    showOnlyNoAnimation(previousIndex, nextIndex);
-                }
-
-                @Override
-                public void onAnimationEnd(final Animator animation) {
-                    if (!isCancelled) {
-                        Log.v(TAG, "onAnimationEnd(out)");
-                        super.onAnimationEnd(animation);
-                        circularReveal(previousIndex, nextIndex, point);
-                    }
-                }
-            });
-
-        mAnimator = animator;
-        animator.setDuration(mAnimationDuration);
-        animator.setInterpolator((Interpolator) mInterpolator);
-        animator.start();
-
-        mAnimatorAnimating = true;
-    }
-
-    @TargetApi (21)
-    private void circularReveal(final int previousIndex, final int nextIndex, final Point point) {
-        if (DBG) {
-            Log.i(TAG, "circularReveal: " + previousIndex + " > " + nextIndex);
-        }
-
-        final View nextView = getChildAt(nextIndex);
-        final View previousView = getChildAt(previousIndex);
-        final View targetView = nextView;
-
-        showOnlyNoAnimation(previousIndex, nextIndex);
-
-        if (targetView.getWidth() == 0 || targetView.getHeight() == 0) {
-            targetView.getViewTreeObserver().addOnPreDrawListener(
-                new ViewTreeObserver.OnPreDrawListener() {
-                    @Override
-                    public boolean onPreDraw() {
-                        targetView.getViewTreeObserver().removeOnPreDrawListener(this);
-
-                        if (targetView.getWidth() == 0 || targetView.getHeight() == 0) {
-                            mAnimatorAnimating = false;
-                            showOnlyNoAnimation(previousIndex, nextIndex);
-                            onViewChanged(previousIndex, nextIndex);
-                        } else {
-                            circularReveal(previousIndex, nextIndex, point);
-                        }
-                        return true;
-                    }
-                });
-            return;
-        }
-
-        Point newPoint = getViewCenter(targetView);
-        int finalRadius = Math.max(targetView.getWidth(), targetView.getHeight());
-
-        Animator animator = ViewAnimationUtils
-            .createCircularReveal(targetView, newPoint.x, newPoint.y, 0, finalRadius);
-
-        animator.addListener(
-            new AnimatorListenerAdapter() {
-                boolean isCancelled;
-
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    super.onAnimationEnd(animation);
-                    mAnimatorAnimating = false;
-
-                    if (!isCancelled) {
-                        onViewChanged(previousIndex, nextIndex);
-                    }
-                }
-
-                @Override
-                public void onAnimationCancel(final Animator animation) {
-                    isCancelled = true;
-                    mAnimatorAnimating = false;
-                    super.onAnimationCancel(animation);
-                }
-            });
-
-        mAnimator = animator;
-        animator.setDuration(mAnimationDuration);
-        animator.setInterpolator((Interpolator) mInterpolator);
-        animator.start();
-    }
-
     protected Point getViewCenter(final View targetView) {
         Point newPoint = new Point();
-        newPoint.x = (targetView.getLeft() + targetView.getRight()) / 2;
-        newPoint.y = (targetView.getTop() + targetView.getBottom()) / 2;
+        newPoint.x = (targetView.getWidth()) / 2;
+        newPoint.y = (targetView.getHeight()) / 2;
+        if (DBG) {
+            Log.v(TAG, "getViewCenter: " + newPoint.x + ", " + newPoint.y);
+        }
         return newPoint;
-    }
-
-    protected void showOnlyNoAnimation(final int previousIndex, final int childIndex) {
-        mInstance.showOnlyNoAnimation(previousIndex, childIndex);
-    }
-
-    public boolean isAnimating() {
-        return mInstance.isAnimating();
     }
 
     void onViewChanged(int prevIndex, int curIndex) {
@@ -315,7 +197,9 @@ public class ViewRevealAnimator extends FrameLayout {
 
     @Override
     public void addView(View child, int index, ViewGroup.LayoutParams params) {
-        Log.i(TAG, "addView, index: " + index + ", current children: " + getChildCount());
+        if (DBG) {
+            Log.i(TAG, "addView, index: " + index + ", current children: " + getChildCount());
+        }
         super.addView(child, index, params);
         if (getChildCount() == 1) {
             child.setVisibility(View.VISIBLE);

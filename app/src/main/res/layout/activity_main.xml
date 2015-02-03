@@ -21,12 +21,13 @@
         android:animateFirstView="true"
         android:outAnimation="@anim/out_animation"
         android:inAnimation="@anim/in_animation"
-        android:interpolator="@android:interpolator/linear_out_slow_in"
-        tools:targetApi="21">
+        android:interpolator="@android:interpolator/accelerate_decelerate">
 
         <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="40dip"
+            android:layout_gravity="center"
             android:background="#ffffff">
 
             <TextView

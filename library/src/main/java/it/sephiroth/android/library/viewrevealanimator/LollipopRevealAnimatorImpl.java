@@ -9,10 +9,12 @@ import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.ViewTreeObserver;
 
+import static it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator.DBG;
+
 /**
  * Created by alessandro on 01/02/15.
  */
-public class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
+class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
     private boolean mAnimatorAnimating;
     private Animator mAnimator;
 
@@ -22,7 +24,9 @@ public class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
 
     @TargetApi (21)
     private void circularHide(final int previousIndex, final int nextIndex) {
-        Log.i(TAG, "circularHide: " + previousIndex + " > " + nextIndex);
+        if (DBG) {
+            Log.i(TAG, "circularHide: " + previousIndex + " > " + nextIndex);
+        }
         mAnimatorAnimating = true;
         final View previousView = parent.getChildAt(previousIndex);
 
@@ -41,7 +45,9 @@ public class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
 
                 @Override
                 public void onAnimationCancel(final Animator animation) {
-                    Log.v(TAG, "onAnimationCancel(hide)");
+                    if (DBG) {
+                        Log.v(TAG, "onAnimationCancel(hide)");
+                    }
                     isCancelled = true;
                     mAnimatorAnimating = false;
                 }
@@ -64,7 +70,9 @@ public class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
 
     @TargetApi (21)
     private void circularReveal(final int previousIndex, final int nextIndex, final boolean hideBeforeReveal) {
-        Log.i(TAG, "circularReveal: " + previousIndex + " > " + nextIndex);
+        if (DBG) {
+            Log.i(TAG, "circularReveal: " + previousIndex + " > " + nextIndex);
+        }
 
         mAnimatorAnimating = true;
         final boolean isReveal = !hideBeforeReveal ? (nextIndex > previousIndex ? true : false) : true;
@@ -124,7 +132,9 @@ public class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
 
                 @Override
                 public void onAnimationCancel(final Animator animation) {
-                    Log.v(TAG, "onAnimationCancel(show)");
+                    if (DBG) {
+                        Log.v(TAG, "onAnimationCancel(show)");
+                    }
                     isCancelled = true;
                     mAnimatorAnimating = false;
                     super.onAnimationCancel(animation);
@@ -148,7 +158,9 @@ public class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
 
     @Override
     public void showOnlyNoAnimation(final int previousIndex, final int childIndex) {
-        Log.i(TAG, "showOnlyNoAnimation: " + previousIndex + " > " + childIndex);
+        if (DBG) {
+            Log.i(TAG, "showOnlyNoAnimation: " + previousIndex + " > " + childIndex);
+        }
 
         for (int i = 0; i < parent.getChildCount(); i++) {
             View child = parent.getChildAt(i);
@@ -167,7 +179,6 @@ public class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
 
     @Override
     public boolean shouldAnimate() {
-        Log.d(TAG, "shouldAnimate: " + mAnimatorAnimating);
         if (mAnimatorAnimating) {
             return false;
         }

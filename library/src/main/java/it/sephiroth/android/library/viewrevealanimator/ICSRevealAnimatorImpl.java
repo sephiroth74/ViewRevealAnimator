@@ -4,6 +4,8 @@ import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
 
+import static it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator.DBG;
+
 /**
  * Created by alessandro on 01/02/15.
  */
@@ -14,7 +16,9 @@ public class ICSRevealAnimatorImpl extends RevealAnimatorImpl {
 
     @Override
     public void showOnly(final int previousChild, final int childIndex) {
-        Log.i(TAG, "showOnly: " + previousChild + " >> " + childIndex);
+        if (DBG) {
+            Log.i(TAG, "showOnly: " + previousChild + " >> " + childIndex);
+        }
 
         parent.mInAnimation.setAnimationListener(new MyAnimationListener(previousChild, childIndex));
 
@@ -85,7 +89,9 @@ public class ICSRevealAnimatorImpl extends RevealAnimatorImpl {
 
         @Override
         public void onAnimationEnd(final Animation animation) {
-            Log.d(TAG, "onAnimationEnd");
+            if (DBG) {
+                Log.d(TAG, "onAnimationEnd");
+            }
             parent.onViewChanged(prevIndex, childIndex);
         }
 
