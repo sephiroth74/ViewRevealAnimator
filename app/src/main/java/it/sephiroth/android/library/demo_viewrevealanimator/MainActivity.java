@@ -13,7 +13,8 @@ import android.widget.CompoundButton;
 import it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator;
 
 public class MainActivity extends ActionBarActivity
-    implements View.OnClickListener, ViewRevealAnimator.OnViewChangedListener, CompoundButton.OnCheckedChangeListener, ViewRevealAnimator.OnViewAnimationListener {
+    implements View.OnClickListener, ViewRevealAnimator.OnViewChangedListener, CompoundButton.OnCheckedChangeListener,
+               ViewRevealAnimator.OnViewAnimationListener {
     private static final String TAG = "MainActivity";
     ViewRevealAnimator mViewAnimator;
     private boolean mHideBeforeReveal;
@@ -72,17 +73,20 @@ public class MainActivity extends ActionBarActivity
 
         switch (id) {
             case R.id.next:
-                mViewAnimator.showNext();
+                //mViewAnimator.setDisplayedChild(mViewAnimator.getDisplayedChild()+1, true, new Point(250, 250));
+                //mViewAnimator.showNext();
+                mViewAnimator.setDisplayedChild(1);
                 break;
 
             case R.id.previous:
+                //mViewAnimator.setDisplayedChild(mViewAnimator.getDisplayedChild()-1, true, new Point(250, 250));
                 mViewAnimator.showPrevious();
                 break;
 
             case R.id.next2:
                 int current = mViewAnimator.getDisplayedChild() + 2;
                 current = current % mViewAnimator.getChildCount();
-                mViewAnimator.setDisplayedChild(current, null);
+                mViewAnimator.setDisplayedChild(current, false, null);
                 break;
         }
     }

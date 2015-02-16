@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Point;
 import android.os.Build;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -49,6 +50,10 @@ public class ViewRevealAnimator extends FrameLayout {
         return Math.max(view.getWidth(), view.getHeight());
     }
 
+    public static final double distance(@NonNull Point origin, @NonNull Point newPoint) {
+        return Math.sqrt((origin.x - newPoint.x) * (origin.x - newPoint.x) + (origin.y - newPoint.y) * (origin.y - newPoint.y));
+    }
+
     public ViewRevealAnimator(Context context) {
         this(context, null);
     }
@@ -66,7 +71,7 @@ public class ViewRevealAnimator extends FrameLayout {
             mInstance = new ICSRevealAnimatorImpl(this);
         }
 
-        TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ViewRelealAnimator);
+        TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.ViewRelealAnimator, defStyleAttr, 0);
 
         int resourceIn = a.getResourceId(R.styleable.ViewRelealAnimator_android_inAnimation, 0);
         int resourceOut = a.getResourceId(R.styleable.ViewRelealAnimator_android_outAnimation, 0);
@@ -121,10 +126,14 @@ public class ViewRevealAnimator extends FrameLayout {
      * @param whichChild the index of the child view to display
      */
     public void setDisplayedChild(int whichChild) {
-        setDisplayedChild(whichChild, null);
+        setDisplayedChild(whichChild, true, null);
     }
 
-    public void setDisplayedChild(int whichChild, @Nullable Point origin) {
+    public void setDisplayedChild(int whichChild, boolean animate) {
+        setDisplayedChild(whichChild, animate, null);
+    }
+
+    public void setDisplayedChild(int whichChild, boolean animate, @Nullable Point origin) {
         if (DBG) {
             Log.i(TAG, "setDisplayedChild, current: " + mWhichChild + ", next: " + whichChild);
         }
@@ -143,7 +152,7 @@ public class ViewRevealAnimator extends FrameLayout {
             mWhichChild = getChildCount() - 1;
         }
         boolean hasFocus = getFocusedChild() != null;
-        showOnly(mPreviousChild, mWhichChild);
+        showOnly(mPreviousChild, mWhichChild, animate, origin);
         if (hasFocus) {
             requestFocus(FOCUS_FORWARD);
         }
@@ -166,15 +175,12 @@ public class ViewRevealAnimator extends FrameLayout {
         setDisplayedChild(mWhichChild - 1);
     }
 
-    void showOnly(int previousIndex, int childIndex) {
-        final boolean animate = shouldAnimate();
-        showOnly(previousIndex, childIndex, animate);
-    }
-
-    void showOnly(int previousChild, int childIndex, boolean animate) {
+    void showOnly(int previousChild, int childIndex, boolean animate, @Nullable Point origin) {
         if (DBG) {
             Log.i(TAG, "showOnly: " + previousChild + " >> " + childIndex + ", animate: " + animate);
         }
+
+        animate = animate && shouldAnimate();
 
         mFirstTime = false;
 
@@ -182,7 +188,7 @@ public class ViewRevealAnimator extends FrameLayout {
             mInstance.showOnlyNoAnimation(previousChild, childIndex);
             onViewChanged(previousChild, childIndex);
         } else {
-            mInstance.showOnly(previousChild, childIndex);
+            mInstance.showOnly(previousChild, childIndex, origin);
         }
     }
 
@@ -234,7 +240,7 @@ public class ViewRevealAnimator extends FrameLayout {
             child.setVisibility(View.GONE);
         }
         if (index >= 0 && mWhichChild >= index) {
-            setDisplayedChild(mWhichChild + 1, null);
+            setDisplayedChild(mWhichChild + 1, false, null);
         }
     }
 
@@ -261,9 +267,9 @@ public class ViewRevealAnimator extends FrameLayout {
             mWhichChild = 0;
             mFirstTime = true;
         } else if (mWhichChild >= childCount) {
-            setDisplayedChild(childCount - 1, null);
+            setDisplayedChild(childCount - 1, false, null);
         } else if (mWhichChild == index) {
-            setDisplayedChild(mWhichChild, null);
+            setDisplayedChild(mWhichChild, false, null);
         }
     }
 
@@ -277,7 +283,7 @@ public class ViewRevealAnimator extends FrameLayout {
             mWhichChild = 0;
             mFirstTime = true;
         } else if (mWhichChild >= start && mWhichChild < start + count) {
-            setDisplayedChild(mWhichChild, null);
+            setDisplayedChild(mWhichChild, false, null);
         }
     }
 

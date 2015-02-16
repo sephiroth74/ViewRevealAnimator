@@ -1,5 +1,7 @@
 package it.sephiroth.android.library.viewrevealanimator;
 
+import android.graphics.Point;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
@@ -15,7 +17,7 @@ public class ICSRevealAnimatorImpl extends RevealAnimatorImpl {
     }
 
     @Override
-    public void showOnly(final int previousChild, final int childIndex) {
+    public void showOnly(final int previousChild, final int childIndex, @Nullable final Point origin) {
         if (DBG) {
             Log.i(TAG, "showOnly: " + previousChild + " >> " + childIndex);
         }

@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.graphics.Point;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewAnimationUtils;
@@ -23,15 +24,24 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
     }
 
     @TargetApi (21)
-    private void circularHide(final int previousIndex, final int nextIndex) {
+    private void circularHide(final int previousIndex, final int nextIndex, @Nullable final Point origin) {
         if (DBG) {
             Log.i(TAG, "circularHide: " + previousIndex + " > " + nextIndex);
+            if (null != origin) {
+                Log.v(TAG, "origin: " + origin.x + "x" + origin.y);
+            }
         }
         mAnimatorAnimating = true;
         final View previousView = parent.getChildAt(previousIndex);
-
-        Point newPoint = parent.getViewCenter(previousView);
         int finalRadius = parent.getViewRadius(previousView);
+        Point newPoint = parent.getViewCenter(previousView);
+
+        if (null != origin) {
+            double distance = ViewRevealAnimator.distance(origin, newPoint);
+            finalRadius += distance;
+            newPoint = new Point(origin.x - previousView.getLeft(), origin.y - previousView.getTop());
+        }
+
 
         Animator animator = ViewAnimationUtils.createCircularReveal(previousView, newPoint.x, newPoint.y, finalRadius, 0);
         animator.addListener(
@@ -55,9 +65,12 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
 
                 @Override
                 public void onAnimationEnd(final Animator animation) {
+                    if (DBG) {
+                        Log.v(TAG, "onAnimationEnd(hide), isCancelled: " + isCancelled);
+                    }
                     if (!isCancelled) {
                         super.onAnimationEnd(animation);
-                        circularReveal(previousIndex, nextIndex, true);
+                        circularReveal(previousIndex, nextIndex, true, origin);
                     }
                 }
             });
@@ -70,9 +83,13 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
     }
 
     @TargetApi (21)
-    private void circularReveal(final int previousIndex, final int nextIndex, final boolean hideBeforeReveal) {
+    private void circularReveal(
+        final int previousIndex, final int nextIndex, final boolean hideBeforeReveal, @Nullable final Point origin) {
         if (DBG) {
             Log.i(TAG, "circularReveal: " + previousIndex + " > " + nextIndex);
+            if (null != origin) {
+                Log.v(TAG, "origin: " + origin.x + "x" + origin.y);
+            }
         }
 
         mAnimatorAnimating = true;
@@ -94,12 +111,16 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
                     public boolean onPreDraw() {
                         targetView.getViewTreeObserver().removeOnPreDrawListener(this);
 
+                        if (DBG) {
+                            Log.d(TAG, "onPreDraw");
+                        }
+
                         if (targetView.getWidth() == 0 || targetView.getHeight() == 0) {
                             mAnimatorAnimating = false;
                             showOnlyNoAnimation(previousIndex, nextIndex);
                             parent.onViewChanged(previousIndex, nextIndex);
                         } else {
-                            circularReveal(previousIndex, nextIndex, hideBeforeReveal);
+                            circularReveal(previousIndex, nextIndex, hideBeforeReveal, origin);
                         }
                         return true;
                     }
@@ -107,8 +128,14 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
             return;
         }
 
-        Point newPoint = parent.getViewCenter(targetView);
         int finalRadius = parent.getViewRadius(targetView);
+        Point newPoint = parent.getViewCenter(targetView);
+
+        if (null != origin) {
+            double distance = ViewRevealAnimator.distance(origin, newPoint);
+            finalRadius += distance;
+            newPoint = new Point(origin.x - targetView.getLeft(), origin.y - targetView.getTop());
+        }
 
         Animator animator = ViewAnimationUtils
             .createCircularReveal(targetView, newPoint.x, newPoint.y, isReveal ? 0 : finalRadius, isReveal ? finalRadius : 0);
@@ -144,7 +171,7 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
 
                 @Override
                 public void onAnimationStart(final Animator animation) {
-                    if(!hideBeforeReveal) {
+                    if (!hideBeforeReveal) {
                         parent.onAnimationStarted(previousIndex, nextIndex);
                     }
                 }
@@ -157,11 +184,11 @@ class LollipopRevealAnimatorImpl extends RevealAnimatorImpl {
     }
 
     @Override
-    public void showOnly(final int previousChild, final int childIndex) {
+    public void showOnly(final int previousChild, final int childIndex, Point origin) {
         if (!parent.getHideBeforeReveal()) {
-            circularReveal(previousChild, childIndex, parent.getHideBeforeReveal());
+            circularReveal(previousChild, childIndex, parent.getHideBeforeReveal(), origin);
         } else {
-            circularHide(previousChild, childIndex);
+            circularHide(previousChild, childIndex, origin);
         }
     }
 
