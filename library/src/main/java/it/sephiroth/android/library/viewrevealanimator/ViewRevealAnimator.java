@@ -33,7 +33,7 @@ public class ViewRevealAnimator extends FrameLayout {
     }
 
     private static final String TAG = "ViewRevealAnimator";
-    protected static final boolean DBG = true;
+    protected static final boolean DBG = false;
     int mWhichChild = 0;
     boolean mFirstTime = true;
     boolean mAnimateFirstTime = true;
