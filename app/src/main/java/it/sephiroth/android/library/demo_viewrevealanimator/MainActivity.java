@@ -1,5 +1,6 @@
 package it.sephiroth.android.library.demo_viewrevealanimator;
 
+import android.graphics.Point;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -40,7 +41,8 @@ public class MainActivity extends ActionBarActivity
                 @Override
                 public boolean onTouch(final View v, final MotionEvent event) {
                     if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                        mViewAnimator.showNext();
+                        int current = mViewAnimator.getDisplayedChild();
+                        mViewAnimator.setDisplayedChild(current + 1, true, new Point((int) event.getX(), (int) event.getY()));
                         return true;
                     }
                     return false;
@@ -73,13 +75,10 @@ public class MainActivity extends ActionBarActivity
 
         switch (id) {
             case R.id.next:
-                //mViewAnimator.setDisplayedChild(mViewAnimator.getDisplayedChild()+1, true, new Point(250, 250));
-                //mViewAnimator.showNext();
-                mViewAnimator.setDisplayedChild(1);
+                mViewAnimator.showNext();
                 break;
 
             case R.id.previous:
-                //mViewAnimator.setDisplayedChild(mViewAnimator.getDisplayedChild()-1, true, new Point(250, 250));
                 mViewAnimator.showPrevious();
                 break;
 

@@ -13,9 +13,9 @@
     <it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator
         android:layout_centerHorizontal="true"
         android:id="@+id/animator"
-        android:layout_width="200dip"
-        android:layout_height="200dip"
-        android:animationDuration="@android:integer/config_longAnimTime"
+        android:layout_width="match_parent"
+        android:layout_height="300dip"
+        android:animationDuration="@android:integer/config_mediumAnimTime"
         app:vra_hideBeforeReveal="true"
         android:measureAllChildren="true"
         android:animateFirstView="true"
