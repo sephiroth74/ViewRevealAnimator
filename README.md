@@ -9,12 +9,12 @@ Installation
 ===
 
 Just add this to your gradle build script:
-
+```groovy
     compile 'it.sephiroth.android.library.viewrevealanimator:view-reveal-animator:+'
-
+```
 Usage
 ===
-
+```xml
     <it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator
         android:layout_centerHorizontal="true"
         android:id="@+id/animator"
@@ -33,22 +33,22 @@ Usage
 
 
     </it.sephiroth.android.library.viewrevealanimator.ViewRevealAnimator>
-
+```
 
 Then in your code:
-
+```java
     ViewRevealAnimator mViewAnimator = (ViewRevealAnimator) findViewById(R.id.animator);
-
+```
 
 To show the next or previos index :
-
+```java
     mViewAnimator.showNext();
     mViewAnimator.showPrevious();
-
+```
 or:
-
+```java
     mViewAnimator.setDisplayedChild(mViewAnimator.getDisplayedChild()+1, true, new Point(250, 250));
-
+```
 where the first parameter is the targetChild to display, second means animation on/off, and
 third parameter (optional) is to set a custom origin for the reveal/hide animation
 
